@@ -1,6 +1,15 @@
 # SBG SHOP — Change Log
 
-## 2026-10-28 — Full Multi-Page Storefront, Checkout, Legal & Admin Panel Delivered
+## 2026-10-28 — GitHub Repository Preparation & Publishing Readiness Complete
+
+- Audited codebase for security: confirmed zero exposed credentials, API keys, tokens, or private secrets in code and Git history.
+- Upgraded `.gitignore` to protect environment files (`.env*` while preserving `.env.example`), local IDE state (`.cursor/`), scratch image processing scripts (`scratch/`), and exclude the 66MB raw zip archive (`SBG_8_Jerseys_COMPLETE_Pack.zip`).
+- Generated comprehensive `README.md` documenting tech stack (Next.js 16, TypeScript, Three.js), implemented features, design system, local development commands, and explicit distinction for deferred features (production payment gateway).
+- Created `.env.example` with safe placeholder variables.
+- Verified buildability: `npm run build` executed and passed with 0 errors/warnings across all 17 routes.
+- Initialized clean Git commit on branch `main` (`Initial commit: SBG SHOP — Storefront and Virtual Showroom`).
+- Installed GitHub CLI (`gh` v2.103.3) on system for authentication and automated repo provisioning.
+
 
 - Created single source of truth for products in `lib/products.ts` covering all 4 confirmed SKUs with specifications, inventory levels, and image paths.
 - Built persistent client `CartContext` (`context/CartContext.tsx`) with localStorage synchronization, item increment/decrement, subtotal calculation, and real-time badge counters.
