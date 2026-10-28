@@ -1,0 +1,95 @@
+:root {
+  /* Studio Environment Palette (Cool Slate / Studio Grey) */
+  --studio-bg-top: #2d333a;
+  --studio-bg-mid: #22262c;
+  --studio-bg-floor: #15181b;
+  --studio-floor-reflection: rgba(255, 255, 255, 0.04);
+  --studio-ambient-light: rgba(210, 225, 240, 0.08);
+  
+  /* Rail & Hardware */
+  --rail-chrome: #8a94a0;
+  --rail-chrome-highlight: #d1d9e2;
+  --rail-dark: #3a4048;
+  --rail-shadow: rgba(0, 0, 0, 0.65);
+  
+  /* Surface & Overlays */
+  --surface-dock: rgba(18, 21, 25, 0.92);
+  --surface-dock-border: rgba(255, 255, 255, 0.1);
+  --surface-pill: rgba(26, 31, 37, 0.85);
+  --surface-pill-hover: rgba(38, 45, 54, 0.95);
+  
+  /* Text */
+  --text-primary: #f2f5f8;
+  --text-secondary: #9aa5b1;
+  --text-muted: #5e6873;
+  --text-inverse: #0f1215;
+  
+  /* Brand SBG Accents */
+  --brand-gold: #d4a017;
+  --brand-gold-glow: rgba(212, 160, 23, 0.35);
+  --brand-purple: #3d1a78;
+  --brand-purple-light: #5b27b5;
+  --brand-purple-glow: rgba(61, 26, 120, 0.4);
+  
+  --accent-green: #2ecc71;
+  
+  /* Radii */
+  --radius-xs: 3px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+  
+  /* Transitions */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-fast: 0.18s ease;
+  --transition-normal: 0.35s var(--ease-out-expo);
+  --transition-slow: 0.65s var(--ease-out-expo);
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  width: 100%;
+  min-height: 100vh;
+  background-color: var(--studio-bg-floor);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  outline: none;
+  background: none;
+}
+
+/* Custom Scrollbar for Studio */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--studio-bg-floor);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--rail-dark);
+  border-radius: var(--radius-sm);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--rail-chrome);
+}

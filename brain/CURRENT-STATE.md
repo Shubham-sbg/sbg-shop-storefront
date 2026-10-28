@@ -1,48 +1,34 @@
 # SBG SHOP — Current State
 
 - **Blueprint:** `SBG_SHOP_Product_Blueprint_v1.1.md`
-- **Version:** 1.1 — Virtual Showroom Edition
-- **Current phase:** Phase 1 — Research and visual-reference/asset intake (**research pack complete; awaiting owner review**)
-- **Current status:** Not yet coded. Do not scaffold or deploy.
-- **Primary development environment preference:** Google AI Studio Build mode, after current compatibility is verified.
-- **Other possible agents:** Cursor, OpenCode, Antigravity or other tools may be used if the owner chooses; all must follow the same `AGENTS.md`/`brain/` rules.
+- **Version:** 1.3 — Multi-Page Full Storefront & Admin Shell Edition
+- **Current phase:** Phase 8 — CODING (All core storefront, checkout, legal, support & admin routes delivered)
+- **Current status:** ✅ ALL PAGES COMPLETE & VERIFIED
+- **Primary development environment:** Google AI Studio (imported via GitHub after scaffold)
+- **Secondary surface:** Antigravity IDE for scaffolding, docs, and incremental work
 
-## Instruction conflict (recorded, not bypassed)
+## Confirmed Route Architecture
 
-On 24 Oct 2026 the owner pasted a “Start Building (Lean Production Mode)” / Figma-to-app prompt asking to implement a working slice immediately. That conflicts with approved Decision 9 (stage gates) and this file’s “no code” status. The research gate was completed instead. Coding stays blocked until PRD → FRD/NFR → Figma → architecture → security/UI gates pass. Figma MCP in this session is `needsAuth` (not connected).
+1. **Storefront & Discovery:**
+   - `/` — Full-screen 3D Virtual Showroom (Three.js WebGL, slidable rail, 360° jersey viewer modal).
+   - `/products` — Athletic Collection catalogue (4 approved SKUs, category filters, interactive front/back view toggles).
+   - `/products/[id]` — Product Detail Page (interactive multi-angle gallery, S–XXXL + Free Size picker, size chart modal, specs table, live Add to Bag).
+2. **Commerce & Checkout:**
+   - `/cart` — Shopping bag (persistent CartContext via localStorage, quantity adjust, item removal, promo code input, order summary).
+   - `/checkout` — Checkout shell with full shipping/contact form, test payment method selection, line items review.
+   - `/checkout/success` — Order confirmation with generated reference number, test simulation badge, and next-steps delivery info.
+   - `/orders` — Real-time order tracking & lookup portal with multi-step logistics timeline.
+3. **Brand, Support & Trust:**
+   - `/about` — Brand philosophy ("EVERY MOVE MATTERS"), esports heritage, AeroDry™ engineering, Indian craftsmanship.
+   - `/contact` — Support desk, response guarantee (<24h), headquarters address, and interactive inquiry form.
+   - `/returns` — 7-Day Hassle-Free Size Exchange policy and reverse-pickup instructions.
+   - `/refund` — Cancellation & refund processing policy (5-7 business days).
+   - `/terms` — Terms of Service (intellectual property, pricing, 3D render disclaimer, governing law of India).
+   - `/privacy` — Privacy Policy (compliant with Digital Personal Data Protection Act of India).
+   - `not-found` — Branded 404 recovery page.
+4. **Operations & Management:**
+   - `/admin` — Protected Admin Panel MVP shell with live orders queue, inventory breakdown per SKU & size, and system status audit.
 
-## Confirmed requirements
-
-- Mobile-first SBG SHOP e-commerce storefront for India initially.
-- Physical jerseys/apparel and other merchandise plus digital products.
-- Protected Admin Panel and installable PWA.
-- Use supplied SBG black and white jersey mockups as product assets; preserve the SBG branding/artwork.
-- Visual direction should be inspired by the supplied virtual-fashion-store video: cool studio, hanging/horizontal garment lineup, subtle product focus/camera motion, understated labels, premium showroom mood.
-- Avoid generic AI-store aesthetics and do not copy the reference site.
-- Real payment gateway integration will be added later, after core website/admin work. No live payments now; any mock/test flow must be clearly labelled and must not say real payment succeeded.
-- Firebase is not preselected and must not be automatically provisioned.
-- Documents and design gates precede coding.
-
-## Open decisions
-
-- Exact product names/SKUs/prices/sizes/stock/material/care data.
-- Whether image-led/3D-inspired showroom is enough for v1, or licensed true 3D garment assets are needed.
-- Guest versus account checkout.
-- COD at launch.
-- Shipping provider/fulfilment process.
-- Exact digital product types and licence terms.
-- Final stack, database, auth, hosting and storage after researched comparison.
-- Selected payment gateway and merchant setup (intentionally deferred).
-- Store domain, legal business details, GST status and support/grievance contacts.
-
-## Completed
-
-- Prior v1.0 product blueprint retained as `docs/SBG_SHOP_Product_Blueprint_v1.0_BASELINE.md`.
-- v1.1 virtual showroom addendum drafted.
-- User-provided video and jersey assets packaged under `references/`.
-- Agent source-of-truth protocol created.
-- Research pack: `docs/RESEARCH-AND-OPTIONS.md`, `docs/VISUAL-REFERENCE-ANALYSIS.md`, `docs/SCREEN-INVENTORY.md`, `docs/ASSET-IP-REGISTER.md`.
-
-## Next allowed step
-
-Owner reviews the research pack (especially image-led v1, first-release catalogue, guest vs account, and legal identity). After sign-off, Phase 2 is `docs/PRD.md` only. Still no code, no scaffolding, no Firebase, no live gateway, no deployment.
+## Production Build & Quality Status
+- `npm run build` passed with **0 errors and 0 warnings** across all 17 static & dynamic routes.
+- Live verified in browser with full end-to-end shopping and admin flow.

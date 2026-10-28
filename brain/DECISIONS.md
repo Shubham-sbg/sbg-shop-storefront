@@ -15,6 +15,20 @@
 11. **Payment wording:** “My own gateway later” is understood as the owner providing/selecting their gateway/service later; it is not permission to build a custom payment processor.
 12. **3D honesty:** The user supplied rendered 2D jersey mockups, not clean garment meshes/UV textures. Do not claim true 3D rotation unless actual 3D assets and mapping work exist.
 
+## Pre-Figma confirmed decisions — 24 Oct 2026 (Phase 4 gate opened)
+
+17. **SKUs:** Black jersey with tagline (EVERY MOVE MATTERS) and black jersey without tagline are **separate SKUs / products**. White jersey is a third product. Total v1 catalogue: 3 jersey products (black-tagline, black-no-tagline, white).
+18. **Sizes:** S, M, L, XL, XXL, XXXL, and One Size (Free Size). All 7 options offered.
+19. **Price range:** Under ₹999 per jersey. Use ₹999 as the Figma placeholder price until owner confirms exact price before launch.
+20. **Showroom:** Image-led virtual showroom confirmed for v1 launch. Use supplied SBG jersey mockups with premium studio aesthetic, horizontal display, product-focus transitions, front/back viewing. Architecture must stay extensible for genuine 3D assets later. Do NOT fake 3D rotation.
+
+## Owner-confirmed decisions — 24 Oct 2026 (Phase 2 gate opened)
+
+13. **Showroom / 3D:** Owner will supply 3D garment assets. Pause image-led showroom implementation until 3D assets arrive; design the showroom UI to accept either path. Do not use flat 2D mockup rotation to fake 3D.
+14. **v1 catalogue:** Black + White SBG jerseys only. Apparel, merch, digital products deferred to later releases.
+15. **Checkout auth:** Accounts required to purchase. Guest checkout is deferred. Digital entitlements will be tied to authenticated accounts.
+16. **Primary coding environment:** Google AI Studio, imported via GitHub. Cursor is a secondary/research surface. All agents must still follow `AGENTS.md` / `brain/` rules regardless of tool.
+
 ## Research findings (not yet approved)
 
 Recorded 24 Oct 2026 in `docs/RESEARCH-AND-OPTIONS.md`. These are **recommendations**, not locked architecture:
