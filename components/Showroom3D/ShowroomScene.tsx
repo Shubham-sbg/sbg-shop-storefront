@@ -36,21 +36,61 @@ interface Props {
 
 // ─── Geometry & Mesh Builders ────────────────────────────────────────────────
 
+// Helper to generate authentic procedural flank textures matching SBG team colors
+function createFlankTexture(isWhite: boolean): THREE.CanvasTexture | null {
+  if (typeof document === "undefined") return null;
+  const canvas = document.createElement("canvas");
+  canvas.width = 128;
+  canvas.height = 512;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+
+  // Background base
+  ctx.fillStyle = isWhite ? "#2a125a" : "#13151a";
+  ctx.fillRect(0, 0, 128, 512);
+
+  // Royal purple athletic flank block
+  ctx.fillStyle = "#3d1a78";
+  ctx.fillRect(16, 0, 96, 512);
+
+  // SBG Gold racing accent pinstripe down the center
+  ctx.fillStyle = "#d4a017";
+  ctx.fillRect(58, 0, 12, 512);
+
+  // Outer shadow gradients
+  const gradL = ctx.createLinearGradient(0, 0, 24, 0);
+  gradL.addColorStop(0, "rgba(0,0,0,0.65)");
+  gradL.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = gradL;
+  ctx.fillRect(0, 0, 24, 512);
+
+  const gradR = ctx.createLinearGradient(128, 0, 104, 0);
+  gradR.addColorStop(0, "rgba(0,0,0,0.65)");
+  gradR.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = gradR;
+  ctx.fillRect(104, 0, 24, 512);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.ClampToEdgeWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
+
 /**
  * Creates a volumetric hanging jersey:
  *  - Front curved draped shell with authentic front PNG texture
  *  - Back curved draped shell with authentic back PNG texture
- *  - Separation gives genuine 3D physical depth (~8cm)
- *  - alphaTest ensures transparent areas outside the garment are completely clear
+ *  - Ergonomic side flank panels, sleeve cuff caps, and shoulder bridges
+ *  - FrontSide culling prevents reversed double-sided bleed-through
  */
-function buildVolumetricJersey(): THREE.Group {
+function buildVolumetricJersey(isWhite = true): THREE.Group {
   const jersey = new THREE.Group();
   jersey.name = "jerseyMesh";
 
   const W = 1.22;
   const H = 1.42;
-  const SEGS_X = 16;
-  const SEGS_Y = 18;
+  const SEGS_X = 24;
+  const SEGS_Y = 24;
   const DEPTH_HALF = 0.042; // ~8.4cm physical garment depth
 
   // 1. Front curved shell (drapes slightly forward)
@@ -59,25 +99,28 @@ function buildVolumetricJersey(): THREE.Group {
   for (let i = 0; i < fPos.count; i++) {
     const x = fPos.getX(i);
     const y = fPos.getY(i);
-    const nx = x / (W / 2); // -1 to 1
-    const ny = y / (H / 2); // -1 to 1
+    const nx = x / (W / 2);
+    const ny = y / (H / 2);
     const drape = Math.cos(nx * Math.PI * 0.45) * Math.max(0, 1 - Math.abs(ny - 0.15) * 0.7);
     fPos.setZ(i, drape * 0.035);
   }
   frontGeo.computeVertexNormals();
 
   const placeholderMat = new THREE.MeshStandardMaterial({
-    color: 0xffffff,
-    roughness: 0.5,
-    metalness: 0.05,
-    side: THREE.DoubleSide,
+    color: isWhite ? 0xf2f5f9 : 0x16181e,
+    roughness: 0.52,
+    metalness: 0.02,
+    side: THREE.FrontSide, // FrontSide only: avoids double-sided conflict & reversed logo
     transparent: true,
+    alphaTest: 0.06,
+    depthWrite: true,
   });
 
   const frontMesh = new THREE.Mesh(frontGeo, placeholderMat);
   frontMesh.name = "frontMesh";
   frontMesh.position.set(0, 0, DEPTH_HALF);
   frontMesh.castShadow = true;
+  frontMesh.receiveShadow = true;
   jersey.add(frontMesh);
 
   // 2. Back curved shell (faces -Z direction)
@@ -98,7 +141,90 @@ function buildVolumetricJersey(): THREE.Group {
   backMesh.rotation.y = Math.PI; // flip to face backwards
   backMesh.position.set(0, 0, -DEPTH_HALF);
   backMesh.castShadow = true;
+  backMesh.receiveShadow = true;
   jersey.add(backMesh);
+
+  // 3. Left and Right 3D Athletic Flank Panels (bridge the side gap)
+  const flankTex = createFlankTexture(isWhite);
+  const flankMat = new THREE.MeshStandardMaterial({
+    color: flankTex ? 0xffffff : 0x3d1a78,
+    map: flankTex || undefined,
+    roughness: 0.55,
+    metalness: 0.08,
+    side: THREE.DoubleSide,
+  });
+
+  [-1, 1].forEach((side) => {
+    // Torso side flank
+    const flankGeo = new THREE.PlaneGeometry(DEPTH_HALF * 2, 0.78, 6, 16);
+    flankGeo.rotateY((side * Math.PI) / 2);
+    const pos = flankGeo.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      const y = pos.getY(i);
+      const ny = y / 0.39;
+      const waistIn = Math.cos(ny * Math.PI * 0.5) * 0.02;
+      pos.setX(i, pos.getX(i) - side * waistIn);
+    }
+    flankGeo.computeVertexNormals();
+
+    const flankMesh = new THREE.Mesh(flankGeo, flankMat);
+    flankMesh.name = side < 0 ? "leftFlank" : "rightFlank";
+    flankMesh.position.set(side * 0.385, -0.22, 0);
+    flankMesh.castShadow = true;
+    flankMesh.receiveShadow = true;
+    jersey.add(flankMesh);
+
+    // Sleeve Cuff Caps
+    const sleeveGeo = new THREE.CylinderGeometry(0.046, 0.052, 0.22, 12, 4, true);
+    sleeveGeo.rotateZ(side * Math.PI * 0.38);
+    const sleeveMat = new THREE.MeshStandardMaterial({
+      color: isWhite ? 0xedeef2 : 0x1a1c22,
+      roughness: 0.5,
+      metalness: 0.05,
+      side: THREE.DoubleSide,
+    });
+    const sleeveMesh = new THREE.Mesh(sleeveGeo, sleeveMat);
+    sleeveMesh.position.set(side * 0.46, 0.22, 0);
+    sleeveMesh.castShadow = true;
+    jersey.add(sleeveMesh);
+
+    // Top Shoulder Seam Bridges
+    const shoulderGeo = new THREE.PlaneGeometry(0.24, DEPTH_HALF * 2, 6, 2);
+    shoulderGeo.rotateX(Math.PI / 2);
+    shoulderGeo.rotateZ(side * -Math.PI * 0.12);
+    const shoulderMat = new THREE.MeshStandardMaterial({
+      color: 0x3a1975,
+      roughness: 0.5,
+      metalness: 0.06,
+      side: THREE.DoubleSide,
+    });
+    const shoulderMesh = new THREE.Mesh(shoulderGeo, shoulderMat);
+    shoulderMesh.position.set(side * 0.26, 0.52, 0);
+    jersey.add(shoulderMesh);
+  });
+
+  // 4. 3D Ribbed V-Neck Collar
+  const collarGeo = new THREE.TorusGeometry(0.14, 0.018, 8, 24);
+  collarGeo.rotateX(Math.PI * 0.25);
+  const collarMat = new THREE.MeshStandardMaterial({
+    color: 0x22242c,
+    roughness: 0.45,
+    metalness: 0.1,
+  });
+  const collarMesh = new THREE.Mesh(collarGeo, collarMat);
+  collarMesh.position.set(0, 0.48, 0);
+  collarMesh.castShadow = true;
+  jersey.add(collarMesh);
+
+  // 5. Dark Interior Cavity Liner
+  const innerGeo = new THREE.CylinderGeometry(0.32, 0.30, 0.95, 16, 4, true);
+  const innerMat = new THREE.MeshBasicMaterial({
+    color: 0x0c0e12,
+    side: THREE.BackSide,
+  });
+  const innerMesh = new THREE.Mesh(innerGeo, innerMat);
+  innerMesh.position.set(0, -0.06, 0);
+  jersey.add(innerMesh);
 
   return jersey;
 }
@@ -248,40 +374,98 @@ export default function ShowroomScene({ products, selectedIndex, onSelectProduct
   const CAMERA_Z = 4.4;
 
   const onSelectRef = useRef(onSelectProduct);
-  onSelectRef.current = onSelectProduct;
+  useEffect(() => {
+    onSelectRef.current = onSelectProduct;
+  }, [onSelectProduct]);
 
-  // Apply textures to front & back meshes of a jersey
+  const selectedIndexRef = useRef(selectedIndex);
+  useEffect(() => {
+    selectedIndexRef.current = selectedIndex;
+  }, [selectedIndex]);
+
+  // Global texture cache for instantaneous re-use across interactions
+  const textureCacheRef = useRef<Map<string, THREE.Texture>>(new Map());
+
+  // Apply textures to front & back meshes of a jersey with fallback and crossOrigin
   const applyTextures = useCallback(
     (jerseyMesh: THREE.Group, product: ShowroomProduct, loader: THREE.TextureLoader) => {
       const frontMesh = jerseyMesh.getObjectByName("frontMesh") as THREE.Mesh | undefined;
       const backMesh = jerseyMesh.getObjectByName("backMesh") as THREE.Mesh | undefined;
       if (!frontMesh || !backMesh) return;
 
-      // Load front high-resolution transparent PNG
-      loader.load(product.frontImage, (tex) => {
-        tex.colorSpace = THREE.SRGBColorSpace;
-        frontMesh.material = new THREE.MeshStandardMaterial({
-          map: tex,
-          transparent: true,
-          alphaTest: 0.05,
-          roughness: 0.5,
-          metalness: 0.02,
-          side: THREE.DoubleSide,
-        });
-      });
+      const loadTexture = (url: string, targetMesh: THREE.Mesh) => {
+        if (textureCacheRef.current.has(url)) {
+          const cachedTex = textureCacheRef.current.get(url)!;
+          targetMesh.material = new THREE.MeshStandardMaterial({
+            map: cachedTex,
+            transparent: true,
+            alphaTest: 0.06,
+            roughness: 0.5,
+            metalness: 0.02,
+            side: THREE.FrontSide,
+            depthWrite: true,
+          });
+          targetMesh.material.needsUpdate = true;
+          return;
+        }
 
-      // Load back high-resolution transparent PNG
-      loader.load(product.backImage, (tex) => {
-        tex.colorSpace = THREE.SRGBColorSpace;
-        backMesh.material = new THREE.MeshStandardMaterial({
-          map: tex,
-          transparent: true,
-          alphaTest: 0.05,
-          roughness: 0.5,
-          metalness: 0.02,
-          side: THREE.DoubleSide,
-        });
-      });
+        loader.load(
+          url,
+          (tex) => {
+            tex.colorSpace = THREE.SRGBColorSpace;
+            tex.generateMipmaps = false;
+            tex.minFilter = THREE.LinearFilter;
+            tex.magFilter = THREE.LinearFilter;
+            tex.wrapS = THREE.ClampToEdgeWrapping;
+            tex.wrapT = THREE.ClampToEdgeWrapping;
+            tex.needsUpdate = true;
+            textureCacheRef.current.set(url, tex);
+
+            targetMesh.material = new THREE.MeshStandardMaterial({
+              map: tex,
+              transparent: true,
+              alphaTest: 0.06,
+              roughness: 0.5,
+              metalness: 0.02,
+              side: THREE.FrontSide,
+              depthWrite: true,
+            });
+            targetMesh.material.needsUpdate = true;
+          },
+          undefined,
+          (err) => {
+            console.warn("Three.js TextureLoader fallback for:", url, err);
+            if (typeof window !== "undefined") {
+              const img = new window.Image();
+              img.crossOrigin = "anonymous";
+              img.onload = () => {
+                const fallbackTex = new THREE.Texture(img);
+                fallbackTex.colorSpace = THREE.SRGBColorSpace;
+                fallbackTex.generateMipmaps = false;
+                fallbackTex.minFilter = THREE.LinearFilter;
+                fallbackTex.magFilter = THREE.LinearFilter;
+                fallbackTex.needsUpdate = true;
+                textureCacheRef.current.set(url, fallbackTex);
+
+                targetMesh.material = new THREE.MeshStandardMaterial({
+                  map: fallbackTex,
+                  transparent: true,
+                  alphaTest: 0.06,
+                  roughness: 0.5,
+                  metalness: 0.02,
+                  side: THREE.FrontSide,
+                  depthWrite: true,
+                });
+                targetMesh.material.needsUpdate = true;
+              };
+              img.src = url;
+            }
+          }
+        );
+      };
+
+      loadTexture(product.frontImage, frontMesh);
+      loadTexture(product.backImage, backMesh);
     },
     []
   );
@@ -379,6 +563,7 @@ export default function ShowroomScene({ products, selectedIndex, onSelectProduct
 
     // ── Garments & Hangers ─────────────────────────────────────────────
     const loader = new THREE.TextureLoader();
+    loader.setCrossOrigin("anonymous");
     const garmentUnits: { group: THREE.Group; index: number }[] = [];
 
     products.forEach((product, idx) => {
@@ -394,7 +579,7 @@ export default function ShowroomScene({ products, selectedIndex, onSelectProduct
       garmentUnit.add(hanger);
 
       // Jersey: hangs directly from hanger shoulder bar
-      const jerseyMesh = buildVolumetricJersey();
+      const jerseyMesh = buildVolumetricJersey(isWhite);
       jerseyMesh.position.set(0, RAIL_Y - 0.86, 0);
       applyTextures(jerseyMesh, product, loader);
       garmentUnit.add(jerseyMesh);
@@ -424,7 +609,7 @@ export default function ShowroomScene({ products, selectedIndex, onSelectProduct
     let clickStartX = 0;
     let clickStartY = 0;
     let dragVelocity = 0;
-    let railOffsetX = -(selectedIndex - (products.length - 1) / 2) * SPACING;
+    let railOffsetX = -(selectedIndexRef.current - (products.length - 1) / 2) * SPACING;
     let targetOffsetX = railOffsetX;
     let lastDragX = 0;
 
@@ -487,14 +672,23 @@ export default function ShowroomScene({ products, selectedIndex, onSelectProduct
     window.addEventListener("pointermove", onPointerMove);
     window.addEventListener("pointerup", onPointerUp);
 
-    // ── Window Resize ──────────────────────────────────────────────────
+    // ── Window & Container Resize ─────────────────────────────────────
     const onResize = () => {
       if (!mount) return;
-      camera.aspect = mount.clientWidth / mount.clientHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(mount.clientWidth, mount.clientHeight);
+      const w = mount.clientWidth || window.innerWidth;
+      const h = mount.clientHeight || window.innerHeight;
+      if (w > 0 && h > 0) {
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h);
+      }
     };
     window.addEventListener("resize", onResize);
+
+    const resizeObserver = new ResizeObserver(() => {
+      onResize();
+    });
+    resizeObserver.observe(mount);
 
     // ── Render Loop ────────────────────────────────────────────────────
     let rafId = 0;
@@ -515,7 +709,7 @@ export default function ShowroomScene({ products, selectedIndex, onSelectProduct
 
       // Subtle hover lift on selected garment
       garmentUnits.forEach(({ group: unit, index }) => {
-        const isSelected = index === selectedIndex;
+        const isSelected = index === selectedIndexRef.current;
         const targetY = isSelected ? 0.08 : 0;
         unit.position.y += (targetY - unit.position.y) * 0.15;
       });
@@ -541,6 +735,7 @@ export default function ShowroomScene({ products, selectedIndex, onSelectProduct
 
     return () => {
       cancelAnimationFrame(rafId);
+      resizeObserver.disconnect();
       mount.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerup", onPointerUp);
@@ -550,7 +745,7 @@ export default function ShowroomScene({ products, selectedIndex, onSelectProduct
         mount.removeChild(renderer.domElement);
       }
     };
-  }, [products, applyTextures, selectedIndex, SPACING]);
+  }, [products, applyTextures, SPACING]);
 
   useEffect(() => {
     if (!sceneRef.current) return;

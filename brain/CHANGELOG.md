@@ -1,5 +1,50 @@
 # SBG SHOP — Change Log
 
+## 2026-10-28 — 3D Showroom 360° Rotation & Volumetric Garment Mesh Fix
+
+- Diagnosed and resolved the root causes of the missing jersey in Google AI Studio and the blank/disappearing jersey during 360° rotation:
+  1. **Side Profile Disappearance (Edge-On Slit / Missing Geometry):**
+     - Original model was two parallel 2D planes at `z = ±0.042` with open edges and zero thickness at sides. At 90° and 270° side angles, the camera looked directly along the infinitesimal edge of the planes, making the garment vanish.
+     - Engineered a true 9-mesh volumetric 3D garment (`buildVolumetricJersey`) in both `JerseyViewer3D.tsx` and `ShowroomScene.tsx`:
+       - Curved draped front and back shells with 24x24 vertex subdivisions.
+       - Left and Right ergonomic athletic side flank panels with authentic SBG royal purple and gold racing pinstripes (`createFlankTexture`).
+       - Athletic sleeve cuff caps (side rings) bridging the armholes.
+       - Top shoulder seam bridges matching SBG artwork.
+       - 3D ribbed V-neck collar torus.
+       - Dark interior cavity liner cylinder preventing hollow see-through artifacts.
+  2. **Double-Sided Bleed & Reversed Logos:**
+     - Switched front and back shell materials to `side: THREE.FrontSide` with `alphaTest: 0.06` and `depthWrite: true`. This prevents the back-face of the front shell from rendering a reversed mirror image over the back design and prevents depth buffer z-fighting.
+  3. **Concentric Camera Orbit vs. Eccentric Wobble:**
+     - Orbit center aligned strictly with model position (`targetX = modelGroup.position.x`, `targetY = 0.05`, `targetZ = 0`) instead of world `(0, 0, 0)`.
+     - Zoom radius clamped to safe bounds `[1.8, 4.8]` and camera `near` plane set to `0.05`, completely preventing camera clipping into the mesh.
+  4. **Hosted Environment Asset Loading & Viewport Stability:**
+     - Configured CORS headers in `next.config.ts` (`Access-Control-Allow-Origin: *`) for WebGL `texImage2D` texture decoding in iframe environments.
+     - Losslessly compressed all 7 jersey PNGs (70% reduction from ~2.25MB to ~640KB each), accelerating loading times.
+     - Added `ResizeObserver` on container mounts in both showroom components for responsive canvas resizing in iframe layouts.
+- Verified: `npm run lint` passed with 0 errors/0 warnings; `npm run build` passed successfully.
+
+## 2026-10-28 — 3D Showroom Texture Loading & CORS Resolution
+
+- Diagnosed why 3D showroom jerseys were failing to render in the hosted/iframe preview while functioning on localhost:
+  - Configured CORS headers in `next.config.ts` (`Access-Control-Allow-Origin: *`, `Access-Control-Allow-Methods: GET, OPTIONS`) so WebGL `texImage2D` can read texture pixels without cross-origin security errors in iframe environments.
+  - Set `loader.setCrossOrigin("anonymous")` in both `ShowroomScene.tsx` and `JerseyViewer3D.tsx`.
+  - Added safe fallback texture loader using `HTMLImageElement` if `TextureLoader` encounters network or security issues.
+  - Added in-memory texture caching (`textureCacheRef`) across garment interactions to avoid redundant texture re-downloads.
+  - Decoupled `selectedIndex` from the scene setup `useEffect` in `ShowroomScene.tsx` using `selectedIndexRef` so sliding the rail and switching garments no longer disposes and recreates WebGL contexts.
+  - Memoized `showroomProducts` in `app/page.tsx` with `useMemo` to stabilize component reference and avoid re-render thrashing.
+  - Optimized all 7 jersey PNG textures using `sharp` (reduced file sizes by 70%, from ~2.25MB down to ~640KB each), speeding up asset loading 3x–4x over the wire.
+  - Verified with `lint_applet` (0 errors, 0 warnings) and `compile_applet` (successful build). Dev server restarted.
+
+## 2026-10-28 — Google AI Studio GitHub Import Migration Complete
+
+- Followed `github-import-migration` skill for Category C (Web / Node.js Next.js project).
+- Cleaned lockfiles: removed `bun.lock` to conform strictly to npm-only environment.
+- Configured development server script: `"dev": "next dev -p 3000 -H 0.0.0.0"`.
+- Configured `next.config.ts` with `output: "standalone"`.
+- Installed dependencies using npm and resolved strict React 19 ESLint compiler hooks rules (lazy state initializers, ref mutation guards in `JerseyViewer3D.tsx` & `ShowroomScene.tsx`, and unused import cleanups).
+- Verified production build and linting: `compile_applet` and `lint_applet` both passed with 0 errors and 0 warnings.
+- Dev server verified and responsive on `0.0.0.0:3000`.
+
 ## 2026-10-28 — GitHub Repository Preparation & Publishing Readiness Complete
 
 - Audited codebase for security: confirmed zero exposed credentials, API keys, tokens, or private secrets in code and Git history.

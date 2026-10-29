@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 
 export interface CartItem {
   id: string;
@@ -27,31 +27,34 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 const STORAGE_KEY = "sbg_cart_items_v1";
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([]);
-  const [hydrated, setHydrated] = useState(false);
-
-  // Load from localStorage on mount
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        setItems(JSON.parse(stored));
+  const [items, setItems] = useState<CartItem[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          return JSON.parse(stored);
+        }
+      } catch {
+        // Ignore localStorage errors
       }
-    } catch {
-      // Ignore localStorage errors
     }
-    setHydrated(true);
+    return [];
+  });
+  const isMountedRef = useRef(false);
+
+  useEffect(() => {
+    isMountedRef.current = true;
   }, []);
 
   // Save to localStorage whenever items change
   useEffect(() => {
-    if (!hydrated) return;
+    if (!isMountedRef.current) return;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
     } catch {
       // Ignore
     }
-  }, [items, hydrated]);
+  }, [items]);
 
   const addToCart = useCallback((item: Omit<CartItem, "quantity">, quantity = 1) => {
     setItems((prev) => {

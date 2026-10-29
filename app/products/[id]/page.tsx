@@ -3,7 +3,7 @@
 import { use, useState, Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { getProductById, PRODUCTS } from "@/lib/products";
+import { getProductById } from "@/lib/products";
 import { useCart } from "@/context/CartContext";
 import styles from "./page.module.css";
 

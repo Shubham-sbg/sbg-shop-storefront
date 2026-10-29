@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { PRODUCTS, Product } from "@/lib/products";
+import { PRODUCTS } from "@/lib/products";
 import styles from "./page.module.css";
 
 export default function ProductsPage() {

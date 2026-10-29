@@ -42,14 +42,54 @@ const SIZES = ["S", "M", "L", "XL", "XXL", "XXXL", "Free Size"] as const;
 
 // ─── Garment & Hanger Geometry Builders ──────────────────────────────────────
 
-function buildVolumetricJersey(): THREE.Group {
+// Helper to generate authentic procedural flank textures matching SBG team colors
+function createFlankTexture(isWhite: boolean): THREE.CanvasTexture | null {
+  if (typeof document === "undefined") return null;
+  const canvas = document.createElement("canvas");
+  canvas.width = 128;
+  canvas.height = 512;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+
+  // Background base
+  ctx.fillStyle = isWhite ? "#2a125a" : "#13151a";
+  ctx.fillRect(0, 0, 128, 512);
+
+  // Royal purple athletic flank block
+  ctx.fillStyle = "#3d1a78";
+  ctx.fillRect(16, 0, 96, 512);
+
+  // SBG Gold racing accent pinstripe down the center
+  ctx.fillStyle = "#d4a017";
+  ctx.fillRect(58, 0, 12, 512);
+
+  // Outer shadow gradients
+  const gradL = ctx.createLinearGradient(0, 0, 24, 0);
+  gradL.addColorStop(0, "rgba(0,0,0,0.65)");
+  gradL.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = gradL;
+  ctx.fillRect(0, 0, 24, 512);
+
+  const gradR = ctx.createLinearGradient(128, 0, 104, 0);
+  gradR.addColorStop(0, "rgba(0,0,0,0.65)");
+  gradR.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = gradR;
+  ctx.fillRect(104, 0, 24, 512);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.ClampToEdgeWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
+
+function buildVolumetricJersey(isWhite = true): THREE.Group {
   const jersey = new THREE.Group();
   jersey.name = "jerseyMesh";
 
   const W = 1.22;
   const H = 1.42;
-  const SEGS_X = 16;
-  const SEGS_Y = 18;
+  const SEGS_X = 24;
+  const SEGS_Y = 24;
   const DEPTH_HALF = 0.042; // ~8.4cm physical garment depth
 
   // 1. Front curved shell (drapes slightly forward)
@@ -66,17 +106,20 @@ function buildVolumetricJersey(): THREE.Group {
   frontGeo.computeVertexNormals();
 
   const placeholderMat = new THREE.MeshStandardMaterial({
-    color: 0xffffff,
-    roughness: 0.5,
-    metalness: 0.05,
-    side: THREE.DoubleSide,
+    color: isWhite ? 0xf2f5f9 : 0x16181e,
+    roughness: 0.52,
+    metalness: 0.02,
+    side: THREE.FrontSide, // FrontSide only: avoids double-sided conflict & reversed logo
     transparent: true,
+    alphaTest: 0.06,
+    depthWrite: true,
   });
 
   const frontMesh = new THREE.Mesh(frontGeo, placeholderMat);
   frontMesh.name = "frontMesh";
   frontMesh.position.set(0, 0, DEPTH_HALF);
   frontMesh.castShadow = true;
+  frontMesh.receiveShadow = true;
   jersey.add(frontMesh);
 
   // 2. Back curved shell (faces -Z direction)
@@ -97,7 +140,91 @@ function buildVolumetricJersey(): THREE.Group {
   backMesh.rotation.y = Math.PI; // flip to face backwards
   backMesh.position.set(0, 0, -DEPTH_HALF);
   backMesh.castShadow = true;
+  backMesh.receiveShadow = true;
   jersey.add(backMesh);
+
+  // 3. Left and Right 3D Athletic Flank Panels (bridge the side gap)
+  const flankTex = createFlankTexture(isWhite);
+  const flankMat = new THREE.MeshStandardMaterial({
+    color: flankTex ? 0xffffff : 0x3d1a78,
+    map: flankTex || undefined,
+    roughness: 0.55,
+    metalness: 0.08,
+    side: THREE.DoubleSide,
+  });
+
+  [-1, 1].forEach((side) => {
+    // Torso side flank
+    const flankGeo = new THREE.PlaneGeometry(DEPTH_HALF * 2, 0.78, 6, 16);
+    flankGeo.rotateY((side * Math.PI) / 2);
+    const pos = flankGeo.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      const y = pos.getY(i);
+      const ny = y / 0.39;
+      // Athletic ergonomic waist taper
+      const waistIn = Math.cos(ny * Math.PI * 0.5) * 0.02;
+      pos.setX(i, pos.getX(i) - side * waistIn);
+    }
+    flankGeo.computeVertexNormals();
+
+    const flankMesh = new THREE.Mesh(flankGeo, flankMat);
+    flankMesh.name = side < 0 ? "leftFlank" : "rightFlank";
+    flankMesh.position.set(side * 0.385, -0.22, 0);
+    flankMesh.castShadow = true;
+    flankMesh.receiveShadow = true;
+    jersey.add(flankMesh);
+
+    // Sleeve Cuff Caps (side athletic rings)
+    const sleeveGeo = new THREE.CylinderGeometry(0.046, 0.052, 0.22, 12, 4, true);
+    sleeveGeo.rotateZ(side * Math.PI * 0.38);
+    const sleeveMat = new THREE.MeshStandardMaterial({
+      color: isWhite ? 0xedeef2 : 0x1a1c22,
+      roughness: 0.5,
+      metalness: 0.05,
+      side: THREE.DoubleSide,
+    });
+    const sleeveMesh = new THREE.Mesh(sleeveGeo, sleeveMat);
+    sleeveMesh.position.set(side * 0.46, 0.22, 0);
+    sleeveMesh.castShadow = true;
+    jersey.add(sleeveMesh);
+
+    // Top Shoulder Seam Bridges
+    const shoulderGeo = new THREE.PlaneGeometry(0.24, DEPTH_HALF * 2, 6, 2);
+    shoulderGeo.rotateX(Math.PI / 2);
+    shoulderGeo.rotateZ(side * -Math.PI * 0.12);
+    const shoulderMat = new THREE.MeshStandardMaterial({
+      color: 0x3a1975, // Royal Purple shoulder panel matching SBG artwork
+      roughness: 0.5,
+      metalness: 0.06,
+      side: THREE.DoubleSide,
+    });
+    const shoulderMesh = new THREE.Mesh(shoulderGeo, shoulderMat);
+    shoulderMesh.position.set(side * 0.26, 0.52, 0);
+    jersey.add(shoulderMesh);
+  });
+
+  // 4. 3D Ribbed V-Neck Collar
+  const collarGeo = new THREE.TorusGeometry(0.14, 0.018, 8, 24);
+  collarGeo.rotateX(Math.PI * 0.25);
+  const collarMat = new THREE.MeshStandardMaterial({
+    color: 0x22242c,
+    roughness: 0.45,
+    metalness: 0.1,
+  });
+  const collarMesh = new THREE.Mesh(collarGeo, collarMat);
+  collarMesh.position.set(0, 0.48, 0);
+  collarMesh.castShadow = true;
+  jersey.add(collarMesh);
+
+  // 5. Dark Interior Cavity Liner (ensures realistic depth through neck/arm openings)
+  const innerGeo = new THREE.CylinderGeometry(0.32, 0.30, 0.95, 16, 4, true);
+  const innerMat = new THREE.MeshBasicMaterial({
+    color: 0x121418,
+    side: THREE.BackSide,
+  });
+  const innerMesh = new THREE.Mesh(innerGeo, innerMat);
+  innerMesh.position.set(0, -0.08, 0);
+  jersey.add(innerMesh);
 
   return jersey;
 }
@@ -198,7 +325,9 @@ export default function JerseyViewer3D({ product, onClose, onAddToCart }: Props)
   });
 
   const autoRotateRef = useRef(autoRotate);
-  autoRotateRef.current = autoRotate;
+  useEffect(() => {
+    autoRotateRef.current = autoRotate;
+  }, [autoRotate]);
 
   // ── Setup 3D Scene ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -269,42 +398,76 @@ export default function JerseyViewer3D({ product, onClose, onAddToCart }: Props)
     hanger.position.set(0, 0.54, 0);
     modelGroup.add(hanger);
 
-    const jerseyMesh = buildVolumetricJersey();
+    const jerseyMesh = buildVolumetricJersey(isWhite);
     jerseyMesh.position.set(0, 0, 0);
     modelGroup.add(jerseyMesh);
 
     // Load authentic PNG textures
     const loader = new THREE.TextureLoader();
+    loader.setCrossOrigin("anonymous");
     const frontMesh = jerseyMesh.getObjectByName("frontMesh") as THREE.Mesh | undefined;
     const backMesh = jerseyMesh.getObjectByName("backMesh") as THREE.Mesh | undefined;
 
-    if (frontMesh) {
-      loader.load(product.frontImage, (tex) => {
-        tex.colorSpace = THREE.SRGBColorSpace;
-        frontMesh.material = new THREE.MeshStandardMaterial({
-          map: tex,
-          transparent: true,
-          alphaTest: 0.05,
-          roughness: 0.48,
-          metalness: 0.02,
-          side: THREE.DoubleSide,
-        });
-      });
-    }
+    const loadViewerTexture = (url: string, targetMesh: THREE.Mesh | undefined) => {
+      if (!targetMesh) return;
+      loader.load(
+        url,
+        (tex) => {
+          tex.colorSpace = THREE.SRGBColorSpace;
+          tex.generateMipmaps = false;
+          tex.minFilter = THREE.LinearFilter;
+          tex.magFilter = THREE.LinearFilter;
+          tex.wrapS = THREE.ClampToEdgeWrapping;
+          tex.wrapT = THREE.ClampToEdgeWrapping;
+          tex.needsUpdate = true;
+          targetMesh.material = new THREE.MeshStandardMaterial({
+            map: tex,
+            transparent: true,
+            alphaTest: 0.06,
+            roughness: 0.48,
+            metalness: 0.02,
+            side: THREE.FrontSide, // FrontSide ensures no reversed mirror image on the inside!
+            depthWrite: true,
+          });
+          targetMesh.material.needsUpdate = true;
+        },
+        undefined,
+        (err) => {
+          console.warn("JerseyViewer3D TextureLoader fallback for:", url, err);
+          if (typeof window !== "undefined") {
+            const img = new window.Image();
+            img.crossOrigin = "anonymous";
+            img.onload = () => {
+              const fallbackTex = new THREE.Texture(img);
+              fallbackTex.colorSpace = THREE.SRGBColorSpace;
+              fallbackTex.generateMipmaps = false;
+              fallbackTex.minFilter = THREE.LinearFilter;
+              fallbackTex.magFilter = THREE.LinearFilter;
+              fallbackTex.needsUpdate = true;
+              targetMesh.material = new THREE.MeshStandardMaterial({
+                map: fallbackTex,
+                transparent: true,
+                alphaTest: 0.06,
+                roughness: 0.48,
+                metalness: 0.02,
+                side: THREE.FrontSide, // FrontSide ensures no reversed mirror image on the inside!
+                depthWrite: true,
+              });
+              targetMesh.material.needsUpdate = true;
+            };
+            img.src = url;
+          }
+        }
+      );
+    };
 
-    if (backMesh) {
-      loader.load(product.backImage, (tex) => {
-        tex.colorSpace = THREE.SRGBColorSpace;
-        backMesh.material = new THREE.MeshStandardMaterial({
-          map: tex,
-          transparent: true,
-          alphaTest: 0.05,
-          roughness: 0.48,
-          metalness: 0.02,
-          side: THREE.DoubleSide,
-        });
-      });
-    }
+    loadViewerTexture(product.frontImage, frontMesh);
+    loadViewerTexture(product.backImage, backMesh);
+
+    // Concentric orbit target (centered on garment)
+    const targetX = modelGroup.position.x;
+    const targetY = 0.05;
+    const targetZ = 0;
 
     // Camera spherical positioning
     const updateCamera = () => {
@@ -312,11 +475,11 @@ export default function JerseyViewer3D({ product, onClose, onAddToCart }: Props)
       const th = refs.current.theta;
       const ph = refs.current.phi;
       camera.position.set(
-        r * Math.sin(th) * Math.cos(ph),
-        r * Math.sin(ph) + 0.1,
-        r * Math.cos(th) * Math.cos(ph)
+        targetX + r * Math.sin(th) * Math.cos(ph),
+        targetY + r * Math.sin(ph),
+        targetZ + r * Math.cos(th) * Math.cos(ph)
       );
-      camera.lookAt(modelGroup.position.x, 0.05, 0);
+      camera.lookAt(targetX, targetY, targetZ);
     };
     updateCamera();
 
@@ -345,7 +508,7 @@ export default function JerseyViewer3D({ product, onClose, onAddToCart }: Props)
 
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      refs.current.radius = Math.max(2.1, Math.min(5.5, refs.current.radius + e.deltaY * 0.004));
+      refs.current.radius = Math.max(1.8, Math.min(4.8, refs.current.radius + e.deltaY * 0.003));
     };
 
     const onTouchStart = (e: TouchEvent) => {
@@ -368,15 +531,15 @@ export default function JerseyViewer3D({ product, onClose, onAddToCart }: Props)
         const dx = e.touches[0].clientX - refs.current.lastX;
         const dy = e.touches[0].clientY - refs.current.lastY;
         refs.current.theta -= dx * 0.01;
-        refs.current.phi = Math.max(-0.2, Math.min(0.55, refs.current.phi + dy * 0.008));
+        refs.current.phi = Math.max(-0.25, Math.min(0.55, refs.current.phi + dy * 0.008));
         refs.current.lastX = e.touches[0].clientX;
         refs.current.lastY = e.touches[0].clientY;
       } else if (e.touches.length === 2 && refs.current.lastPinchDist !== null) {
         const dx = e.touches[0].clientX - e.touches[1].clientX;
         const dy = e.touches[0].clientY - e.touches[1].clientY;
         const dist = Math.hypot(dx, dy);
-        const factor = (refs.current.lastPinchDist - dist) * 0.008;
-        refs.current.radius = Math.max(2.1, Math.min(5.5, refs.current.radius + factor));
+        const factor = (refs.current.lastPinchDist - dist) * 0.006;
+        refs.current.radius = Math.max(1.8, Math.min(4.8, refs.current.radius + factor));
         refs.current.lastPinchDist = dist;
       }
     };
@@ -396,11 +559,20 @@ export default function JerseyViewer3D({ product, onClose, onAddToCart }: Props)
 
     const onResize = () => {
       if (!mount) return;
-      camera.aspect = mount.clientWidth / mount.clientHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(mount.clientWidth, mount.clientHeight);
+      const w = mount.clientWidth || window.innerWidth;
+      const h = mount.clientHeight || window.innerHeight;
+      if (w > 0 && h > 0) {
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h);
+      }
     };
     window.addEventListener("resize", onResize);
+
+    const resizeObserver = new ResizeObserver(() => {
+      onResize();
+    });
+    resizeObserver.observe(mount);
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -441,6 +613,7 @@ export default function JerseyViewer3D({ product, onClose, onAddToCart }: Props)
       window.removeEventListener("touchend", onTouchEnd);
       window.removeEventListener("resize", onResize);
       window.removeEventListener("keydown", onKeyDown);
+      resizeObserver.disconnect();
       renderer.dispose();
       if (mount.contains(renderer.domElement)) {
         mount.removeChild(renderer.domElement);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { PRODUCTS } from "@/lib/products";
@@ -23,43 +23,43 @@ interface StoredOrder {
   }>;
 }
 
+const DEFAULT_ORDERS: StoredOrder[] = [
+  {
+    orderId: "SBG-ORD-894120",
+    date: "28 Oct 2026",
+    status: "DISPATCHED",
+    total: 1998,
+    customer: { fullName: "Kavya Menon", email: "kavya@gmail.com", city: "Bengaluru" },
+    items: [
+      { name: "SBG STUDIO PRO — TAGLINE", size: "M", quantity: 1, price: 999 },
+      { name: "SBG SIGNATURE PRO", size: "L", quantity: 1, price: 999 },
+    ],
+  },
+  {
+    orderId: "SBG-ORD-893012",
+    date: "27 Oct 2026",
+    status: "CONFIRMED",
+    total: 999,
+    customer: { fullName: "Rohan Varma", email: "rohan@outlook.com", city: "Mumbai" },
+    items: [{ name: "SBG STEALTH CLASSIC", size: "XL", quantity: 1, price: 999 }],
+  },
+];
+
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<"orders" | "inventory" | "system">("orders");
-  const [orders, setOrders] = useState<StoredOrder[]>([]);
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem("sbg_orders_history");
-      if (stored) {
-        setOrders(JSON.parse(stored));
-      } else {
-        // Sample orders for initial demonstration
-        setOrders([
-          {
-            orderId: "SBG-ORD-894120",
-            date: "28 Oct 2026",
-            status: "DISPATCHED",
-            total: 1998,
-            customer: { fullName: "Kavya Menon", email: "kavya@gmail.com", city: "Bengaluru" },
-            items: [
-              { name: "SBG STUDIO PRO — TAGLINE", size: "M", quantity: 1, price: 999 },
-              { name: "SBG SIGNATURE PRO", size: "L", quantity: 1, price: 999 },
-            ],
-          },
-          {
-            orderId: "SBG-ORD-893012",
-            date: "27 Oct 2026",
-            status: "CONFIRMED",
-            total: 999,
-            customer: { fullName: "Rohan Varma", email: "rohan@outlook.com", city: "Mumbai" },
-            items: [{ name: "SBG STEALTH CLASSIC", size: "XL", quantity: 1, price: 999 }],
-          },
-        ]);
+  const [orders] = useState<StoredOrder[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("sbg_orders_history");
+        if (stored) {
+          return JSON.parse(stored);
+        }
+      } catch {
+        // Ignore
       }
-    } catch {
-      // Ignore
     }
-  }, []);
+    return DEFAULT_ORDERS;
+  });
 
   const totalRevenue = orders.reduce((acc, o) => acc + o.total, 0);
 

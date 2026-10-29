@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -29,21 +29,22 @@ interface OrderRecord {
 }
 
 export default function OrdersPage() {
-  const [orders, setOrders] = useState<OrderRecord[]>([]);
+  const [orders] = useState<OrderRecord[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("sbg_orders_history");
+        if (stored) {
+          return JSON.parse(stored);
+        }
+      } catch {
+        // Ignore
+      }
+    }
+    return [];
+  });
   const [searchQuery, setSearchQuery] = useState("");
   const [searchedOrder, setSearchedOrder] = useState<OrderRecord | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem("sbg_orders_history");
-      if (stored) {
-        setOrders(JSON.parse(stored));
-      }
-    } catch {
-      // Ignore
-    }
-  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

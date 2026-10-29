@@ -12,7 +12,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useState, useCallback, Suspense } from "react";
+import { useState, useCallback, useMemo, Suspense } from "react";
 import { PRODUCTS, Product } from "@/lib/products";
 import { useCart } from "@/context/CartContext";
 import styles from "./page.module.css";
@@ -34,6 +34,19 @@ export default function ShowroomPage() {
 
   const { addToCart } = useCart();
   const activeProduct: Product = PRODUCTS[selectedIndex];
+
+  const showroomProducts = useMemo(
+    () =>
+      PRODUCTS.map((p) => ({
+        id: p.id,
+        name: p.name,
+        tag: p.tag,
+        price: p.price,
+        frontImage: p.frontImage,
+        backImage: p.backImage,
+      })),
+    []
+  );
 
   const handleSelectProduct = useCallback((index: number) => {
     setSelectedIndex(index);
@@ -82,14 +95,7 @@ export default function ShowroomPage() {
         {!viewerOpen && (
           <div className={styles.sceneWrap}>
             <ShowroomScene
-              products={PRODUCTS.map((p) => ({
-                id: p.id,
-                name: p.name,
-                tag: p.tag,
-                price: p.price,
-                frontImage: p.frontImage,
-                backImage: p.backImage,
-              }))}
+              products={showroomProducts}
               selectedIndex={selectedIndex}
               onSelectProduct={handleSelectProduct}
             />
